@@ -1,4 +1,4 @@
-The purpose of this file is to track my solutions to the sql exercises found on http://sql-ex.ru/
+The purpose of this file is to track my solutions to the sql exercises found on sql-ex
 
 1. Find the model number, speed and hard drive capacity for all the PCs with prices below $500. Result set: model, speed, hd. 
 ```sql
