@@ -336,3 +336,37 @@ INNER JOIN
    ) AS sunk_tbl_count
 ON ship_tbl_count.country=sunk_tbl_count.country AND ship_tbl_count.ship_count=sunk_tbl_count.sunk_count
 ```
+48. Find the ship classes having at least one ship sunk in battles.
+```sql
+SELECT class FROM ships INNER JOIN
+		(	SELECT ship FROM outcomes WHERE result='sunk') AS x
+		ON ships.name=x.ship
+UNION
+SELECT class FROM classes WHERE classes.class 
+IN (SELECT ship FROM outcomes WHERE result ='sunk')
+```
+49. Find the names of the ships having a gun caliber of 16 inches (including ships in the Outcomes table).
+```sql
+SELECT name FROM ships INNER JOIN classes 
+		ON ships.class=classes.class WHERE bore=16
+UNION
+SELECT ship FROM outcomes INNER JOIN classes 
+		ON outcomes.ship=classes.class WHERE bore =16
+```
+50. Find the battles in which Kongo-class ships from the Ships table were engaged.
+```sql
+SELECT DISTINCT battle FROM outcomes INNER JOIN 
+			ships ON outcomes.ship=ships.name WHERE ships.class='Kongo'
+```
+51. Find the names of the ships with the largest number of guns among all ships having the same displacement (including ships in the Outcomes table).
+```sql
+WITH new_tbl AS
+	(SELECT displacement, numGuns, name FROM ships s INNER JOIN classes c 
+				ON s.class=c.class GROUP BY displacement, numGuns, name
+		UNION
+	 SELECT displacement, numGuns, ship AS name FROM outcomes o INNER JOIN classes c 
+	 			ON o.ship=c.class GROUP BY displacement, numGuns, ship)
+SELECT name FROM new_tbl,
+	(SELECT displacement, MAX(numGuns) AS x_numGuns FROM new_tbl GROUP BY displacement) AS x 
+		WHERE new_tbl.displacement=x.displacement AND new_tbl.numGuns=x.x_numGuns
+```
