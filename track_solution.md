@@ -348,15 +348,15 @@ IN (SELECT ship FROM outcomes WHERE result ='sunk')
 49. Find the names of the ships having a gun caliber of 16 inches (including ships in the Outcomes table).
 ```sql
 SELECT name FROM ships INNER JOIN classes 
-		ON ships.class=classes.class WHERE bore=16
+	ON ships.class=classes.class WHERE bore=16
 UNION
 SELECT ship FROM outcomes INNER JOIN classes 
-		ON outcomes.ship=classes.class WHERE bore =16
+	ON outcomes.ship=classes.class WHERE bore =16
 ```
 50. Find the battles in which Kongo-class ships from the Ships table were engaged.
 ```sql
 SELECT DISTINCT battle FROM outcomes INNER JOIN 
-			ships ON outcomes.ship=ships.name WHERE ships.class='Kongo'
+		ships ON outcomes.ship=ships.name WHERE ships.class='Kongo'
 ```
 51. Find the names of the ships with the largest number of guns among all ships having the same displacement (including ships in the Outcomes table).
 ```sql
@@ -369,4 +369,69 @@ WITH new_tbl AS
 SELECT name FROM new_tbl,
 	(SELECT displacement, MAX(numGuns) AS x_numGuns FROM new_tbl GROUP BY displacement) AS x 
 		WHERE new_tbl.displacement=x.displacement AND new_tbl.numGuns=x.x_numGuns
+```
+52. Determine the names of all ships in the Ships table that can be a Japanese battleship having at least nine main guns with a caliber of less than 19 inches and a displacement of not more than 65 000 tons.
+```SQL
+SELECT name FROM ships s INNER JOIN classes c ON s.class=c.class WHERE
+	(type='bb' OR type IS NULL) AND
+	(country='Japan' OR country IS NULL) AND
+	(numGuns>=9 OR numGuns IS NULL) AND
+	(bore <19 OR bore IS NULL) AND
+	(displacement <=65000 OR displacement IS NULL)
+```
+53. With a precision of two decimal places, determine the average number of guns for the battleship classes.
+```SQL
+SELECT CONVERT(NUMERIC(6,2),AVG(numGuns*1.0))
+	FROM classes WHERE type='bb'
+```
+54. With a precision of two decimal places, determine the average number of guns for all battleships (including the ones in the Outcomes table).
+```sql
+WITH temp AS (
+	SELECT name, type, numGuns FROM ships s INNER JOIN classes c ON s.class=c.class
+UNION
+	SELECT ship, type,numGuns FROM outcomes o INNER JOIN classes c ON o.ship=c.class)
+SELECT CONVERT(NUMERIC(6,2),AVG(numGuns*1.0)) AS avg_numGuns FROM temp WHERE type='bb'
+```
+55. For each class, determine the year the first ship of this class was launched.
+If the lead ship’s year of launch is not known, get the minimum year of launch for the ships of this class.
+```sql
+SELECT c.class, MIN(s.launched) AS year 
+	FROM classes c INNER JOIN ships s 
+		ON c.class=s.class GROUP BY c.class 
+UNION
+SELECT c.class, NULL
+	FROM classes c
+		WHERE  (SELECT Count(*) 
+        		FROM   ships s 
+        		WHERE  c.class = s.class) = 0 
+```
+56. For each class, find out the number of ships of this class that were sunk in battles.
+```sql
+WITH temp AS (SELECT s.class, s.name AS name, result 
+	FROM outcomes o RIGHT JOIN ships s ON o.ship=s.name
+UNION
+	SELECT c.class, o.ship,result 
+		FROM outcomes o RIGHT JOIN classes c ON o.ship=c.class)
+SELECT class,
+	SUM(CASE WHEN result='sunk' THEN 1 ELSE 0 END) 
+		FROM temp GROUP BY class
+```
+57. For classes having irreparable combat losses and at least three ships in the database, display the name of the class and the number of ships sunk.
+```sql
+WITH temp AS (SELECT c.class, s.name AS name 
+		FROM classes c INNER JOIN ships s ON c.class=s.class
+UNION
+	SELECT c.class, o.ship AS name 
+		ROM classes c INNER JOIN outcomes o ON c.class=o.ship) 
+		
+SELECT y.class, sunk_ct FROM
+	(SELECT class, COUNT(*) AS ship_ct 
+			FROM temp GROUP BY class HAVING COUNT(*)>=3) AS x
+INNER JOIN
+(SELECT class, COUNT(o.ship) AS sunk_ct 
+	FROM temp INNER JOIN 
+(SELECT ship, COUNT(*) AS ct 
+	FROM outcomes WHERE result='sunk' GROUP BY ship) o 
+	ON temp.name=o.ship GROUP BY class) AS y
+		ON x.class=y.class
 ```
